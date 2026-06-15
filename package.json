@@ -1,0 +1,41 @@
+{
+  "name": "claude-statusline-todo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A zero-dependency Claude Code status line: TODO.md checkbox progress on the left, model · effort (and optional usage %) pinned to the right.",
+  "bin": {
+    "claude-statusline-todo": "statusline.cjs"
+  },
+  "main": "statusline.cjs",
+  "files": [
+    "statusline.cjs",
+    "README.md",
+    "README-agent.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "demo": "printf '%s' '{\"model\":{\"id\":\"claude-opus-4-8\",\"display_name\":\"Opus 4.8\"},\"effort\":{\"level\":\"high\"},\"workspace\":{\"current_dir\":\"'\"$PWD\"'\"}}' | node statusline.cjs; echo"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "statusline",
+    "status-line",
+    "todo",
+    "cli",
+    "terminal"
+  ],
+  "author": "Stanislav Popov (popstas)",
+  "license": "MIT",
+  "homepage": "https://github.com/popstas/claude-statusline-todo#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/popstas/claude-statusline-todo.git"
+  },
+  "bugs": {
+    "url": "https://github.com/popstas/claude-statusline-todo/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
