@@ -2,13 +2,13 @@
 
 A tiny, zero-dependency [Claude Code](https://docs.claude.com/en/docs/claude-code) status line.
 
-- **Left** — checkbox progress from your project's `docs/TODO.md` (`done/total` + percent).
+- **Left** — checkbox progress from your project's `docs/TODO.md` (`done/total` + percent), plus the current **git branch** when it isn't `main`/`master`.
 - **Right** — the current **model · effort**, color-coded, pinned to the right edge.
 - **Optional** — a **usage %** indicator (e.g. the 5-hour rate-limit window) from a JSON URL you provide.
 
 ```
-📋 4/31 │ 13%                                     17% │ Opus 4.8 · high
-└── docs/TODO.md ──┘                              └ usage ┘ └─ model · effort ─┘
+📋 4/31 │ 13%    ⎇ feature-x                        17% │ Opus 4.8 · high
+└── docs/TODO.md    └ branch                LLM usage ┘    └─ model     └─ effort
 ```
 
 Colors are quiet by default and only shout on anomalies: the usual `Opus · high` is uncolored, while a different model or a heavier/lighter effort lights up so you catch it with peripheral vision.
@@ -52,6 +52,11 @@ All optional, via environment variables (set them in the `env` block of the same
 | `STATUSLINE_USAGE_CRIT` | `90` | Usage % at which it turns red. |
 | `STATUSLINE_USAGE_TTL` | `90` | Seconds before the cached usage value is refreshed (in the background). |
 | `STATUSLINE_RESERVE` | `3` | Columns kept free at the right edge (Claude Code trims slightly early). |
+| `STATUSLINE_BRANCH` | `1` (on) | Set `0`/`off`/`false` to hide the git branch segment. When on, the branch shows for every branch except `main`/`master`. |
+
+### Git branch
+
+Shown on the left, after the TODO counter, as `⎇ <branch>` — but only when the branch is **not** `main` or `master` (so the common case stays clean and a feature branch stands out). The branch is read straight from `.git/HEAD` (walking up from the project dir, and following `.git` worktree pointers); it never shells out, so rendering stays instant. A detached HEAD shows the short commit SHA.
 
 ### Usage indicator
 

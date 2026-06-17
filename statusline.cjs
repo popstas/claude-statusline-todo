@@ -22,6 +22,9 @@ const USAGE_CRIT = Number(process.env.STATUSLINE_USAGE_CRIT || 90);
 const USAGE_TTL_MS = Number(process.env.STATUSLINE_USAGE_TTL || 90) * 1000;
 const RESERVE = Number(process.env.STATUSLINE_RESERVE || 3);
 const USAGE_CACHE = join(os.homedir(), ".cache", "claude-statusline-usage.json");
+// Branch segment: on by default; set STATUSLINE_BRANCH=0/off/false to disable.
+const BRANCH_ON = !/^(0|off|false)$/i.test(process.env.STATUSLINE_BRANCH || "");
+const BRANCH_HIDE = new Set(["main", "master"]); // never shown for these
 
 // --- stdin: Claude Code status JSON ---
 let input;
@@ -40,6 +43,45 @@ function tasksSegment() {
   if (total === 0) return "";
   const pct = Math.round((done / total) * 100);
   return "📋 " + GREEN + done + "/" + total + R + " " + DIM + "│ " + pct + "%" + R;
+}
+
+// --- left: current git branch (hidden on main/master). Reads .git directly,
+//     walking up from cwd; never spawns, never blocks. ---
+function gitDir(start) {
+  let dir = start;
+  for (let i = 0; i < 64; i++) {
+    const g = join(dir, ".git");
+    let st;
+    try { st = statSync(g); } catch { st = null; }
+    if (st) {
+      if (st.isDirectory()) return g;
+      // .git is a file (worktree/submodule): "gitdir: <path>"
+      try {
+        const m = readFileSync(g, "utf-8").match(/gitdir:\s*(.+)/);
+        if (m) { const p = m[1].trim(); return isAbsolute(p) ? p : join(dir, p); }
+      } catch {}
+      return null;
+    }
+    const parent = join(dir, "..");
+    if (parent === dir) break; // reached filesystem root
+    dir = parent;
+  }
+  return null;
+}
+
+function branchSegment() {
+  if (!BRANCH_ON) return "";
+  try {
+    const gd = gitDir(cwd);
+    if (!gd) return "";
+    const head = readFileSync(join(gd, "HEAD"), "utf-8").trim();
+    let name;
+    const ref = head.match(/^ref:\s*refs\/heads\/(.+)$/);
+    if (ref) name = ref[1];
+    else if (/^[0-9a-f]{7,40}$/i.test(head)) name = head.slice(0, 7); // detached HEAD
+    if (!name || BRANCH_HIDE.has(name)) return "";
+    return DIM + "⎇" + R + " " + name;
+  } catch { return ""; }
 }
 
 // --- right: usage % (optional). Cached locally, refreshed in background so
@@ -102,7 +144,7 @@ function modelSegment() {
 // Visible length: strip ANSI; count 📋 as 2 cells.
 const visLen = (s) => s.replace(/\x1b\[[0-9;]*m/g, "").replace(/📋/g, "xx").length;
 
-const left = tasksSegment();
+const left = [tasksSegment(), branchSegment()].filter(Boolean).join("  ");
 const cluster = " " + DIM + "│" + R + " ";
 const right = [usageSegment(), modelSegment()].filter(Boolean).join(cluster);
 

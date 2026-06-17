@@ -4,7 +4,7 @@ You are an AI agent (e.g. Claude Code) installing **claude-statusline-todo** as 
 
 ## Result
 
-A status line that shows, on the **left**, `docs/TODO.md` checkbox progress; on the **right**, `model · effort` (and an optional usage %), pinned to the right edge.
+A status line that shows, on the **left**, `docs/TODO.md` checkbox progress and the git branch (when not `main`/`master`); on the **right**, `model · effort` (and an optional usage %), pinned to the right edge.
 
 ## Steps
 
@@ -36,6 +36,8 @@ A status line that shows, on the **left**, `docs/TODO.md` checkbox progress; on 
 
 5. **(Optional) TODO source.** Default is `docs/TODO.md` relative to each project. To change it, set env `STATUSLINE_TODO` (relative or absolute). Make sure the file contains `- [ ]` / `- [x]` lines, otherwise the left segment is empty (by design).
 
+   **Git branch** is shown automatically (no config) on the left as `⎇ <branch>`, except on `main`/`master`. Set env `STATUSLINE_BRANCH=0` to disable it. It reads `.git/HEAD` directly and never shells out.
+
 6. **Verify** without restarting Claude Code — pipe a sample status JSON:
    ```bash
    echo '{"model":{"id":"claude-opus-4-8","display_name":"Opus 4.8"},"effort":{"level":"high"},"workspace":{"current_dir":"'"$PWD"'"}}' \
@@ -58,6 +60,7 @@ A status line that shows, on the **left**, `docs/TODO.md` checkbox progress; on 
 | `STATUSLINE_USAGE_CRIT` | `90` | Red threshold (%). |
 | `STATUSLINE_USAGE_TTL` | `90` | Background refresh interval (s). |
 | `STATUSLINE_RESERVE` | `3` | Columns kept free at the right edge. |
+| `STATUSLINE_BRANCH` | `1` (on) | `0`/`off`/`false` hides the git branch segment; otherwise shows the branch unless it's `main`/`master`. |
 
 ## Constraints
 
