@@ -5,4 +5,5 @@
 - [x] Right-edge alignment with width fallback
 - [x] Agent setup guide (README-agent.md)
 - [ ] Optional git branch segment
+- [ ] Show git branch in status line only when not on main/master
 - [ ] Screenshot / asciinema in README
