@@ -1,6 +1,6 @@
 {
   "name": "claude-statusline-todo",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "A zero-dependency Claude Code status line: TODO.md checkbox progress on the left, model · effort (and optional usage %) pinned to the right.",
   "bin": {
