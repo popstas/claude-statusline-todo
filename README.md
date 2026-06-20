@@ -47,7 +47,8 @@ All optional, via environment variables (set them in the `env` block of the same
 | Variable | Default | Meaning |
 |---|---|---|
 | `STATUSLINE_TODO` | `docs/TODO.md` | TODO file path (relative to the project, or absolute). |
-| `STATUSLINE_USAGE_URL` | _(unset → off)_ | URL of a JSON usage report. When unset, the usage segment is hidden. |
+| `STATUSLINE_USAGE_URL` | _(unset → off)_ | URL of a JSON usage report. When unset (and no file source), the usage segment is hidden. |
+| `STATUSLINE_USAGE_FILE` | _(unset → off)_ | Read usage from a **local JSON file** instead of a URL (no network). `1`/`true`/`on` → `~/.claude/usage.json`; any other value → that path (`~` is expanded). Takes priority over `STATUSLINE_USAGE_URL`. |
 | `STATUSLINE_USAGE_WARN` | `70` | Usage % at which the number turns yellow. |
 | `STATUSLINE_USAGE_CRIT` | `90` | Usage % at which it turns red. |
 | `STATUSLINE_USAGE_TTL` | `90` | Seconds before the cached usage value is refreshed (in the background). |
@@ -60,13 +61,18 @@ Shown on the left, after the TODO counter, as `⎇ <branch>` — but only when t
 
 ### Usage indicator
 
-When `STATUSLINE_USAGE_URL` is set, the script fetches that JSON **in the background** (detached `curl`) and caches it at `~/.cache/claude-statusline-usage.json`, so rendering never blocks on the network. The JSON must contain:
+The usage segment has two mutually exclusive sources (file takes priority); both keep rendering off the network:
+
+- **Local file** — set `STATUSLINE_USAGE_FILE` and the script **self-populates** the file from the `rate_limits` Claude Code already passes on stdin (Pro/Max sessions, after the first API response), then reads it back on each render. Use `1`/`true`/`on` for the default `~/.claude/usage.json`, or give an explicit path. No token, no OAuth, no `401`, no network — and no second script (Claude Code runs only one status-line command). The value persists between renders, so it stays visible even on refreshes where Claude Code omits `rate_limits`.
+- **Remote URL** — set `STATUSLINE_USAGE_URL` and the script fetches that JSON **in the background** (detached `curl`), caching it at `~/.cache/claude-statusline-usage.json`. Bring your own endpoint (a small cron job that exports your limits works well) — there is no default public source.
+
+Either source must contain:
 
 ```json
 { "fiveHour": { "usedPercent": 17 } }
 ```
 
-`usedPercent` is `0..100`. Bring your own endpoint (a small cron job that exports your limits works well) — there is no default public source.
+`usedPercent` is `0..100`.
 
 ## How it works
 

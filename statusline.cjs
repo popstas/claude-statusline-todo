@@ -4,7 +4,7 @@
 //   right: [usage %] · model · effort — pinned to the right edge
 // Zero dependencies. Reads Claude Code's status JSON on stdin.
 // Config via env (all optional): see README / README-agent.md.
-const { readFileSync, statSync } = require("fs");
+const { readFileSync, writeFileSync, renameSync, statSync } = require("fs");
 const { join, isAbsolute } = require("path");
 const os = require("os");
 const { spawn } = require("child_process");
@@ -17,6 +17,14 @@ const WHITE_ON_RED = "\x1b[1;37;41m";
 // --- config (env, all optional) ---
 const TODO_REL = process.env.STATUSLINE_TODO || "docs/TODO.md";
 const USAGE_URL = process.env.STATUSLINE_USAGE_URL || ""; // empty → usage segment off
+// Alternative source: read a local JSON file (no network) instead of curling a URL.
+// `1`/`true`/`on` → default ~/.claude/usage.json; any other value → that path (with ~).
+const USAGE_FILE = (() => {
+  const v = (process.env.STATUSLINE_USAGE_FILE || "").trim();
+  if (!v) return "";
+  if (/^(1|true|on)$/i.test(v)) return join(os.homedir(), ".claude", "usage.json");
+  return v.startsWith("~") ? join(os.homedir(), v.slice(1)) : v;
+})();
 const USAGE_WARN = Number(process.env.STATUSLINE_USAGE_WARN || 70);
 const USAGE_CRIT = Number(process.env.STATUSLINE_USAGE_CRIT || 90);
 const USAGE_TTL_MS = Number(process.env.STATUSLINE_USAGE_TTL || 90) * 1000;
@@ -84,28 +92,68 @@ function branchSegment() {
   } catch { return ""; }
 }
 
-// --- right: usage % (optional). Cached locally, refreshed in background so
-//     rendering never blocks on the network. ---
-function usageSegment() {
-  if (!USAGE_URL) return "";
-  let pct = null, mtime = 0;
+// When STATUSLINE_USAGE_FILE is on, capture Claude Code's own rate limits (passed on
+// stdin for Pro/Max sessions, after the first API response) into that file, so the
+// file source is self-sustaining — no separate helper, no network, no OAuth. Atomic
+// write, fail-soft: a missing/partial `rate_limits` just skips the update.
+function captureUsage() {
+  if (!USAGE_FILE) return;
+  const rl = input.rate_limits;
+  if (!rl) return;
+  const win = (w) => (w && typeof w.used_percentage === "number"
+    ? { usedPercent: w.used_percentage, resetsAt: w.resets_at ?? null } : null);
+  const five = win(rl.five_hour), week = win(rl.seven_day);
+  if (!five && !week) return;
+  const out = {
+    source: "claude-statusline-todo",
+    updatedAt: Math.floor(Date.now() / 1000),
+    fiveHour: five,
+    weekly: week,
+  };
   try {
-    mtime = statSync(USAGE_CACHE).mtimeMs;
-    const j = JSON.parse(readFileSync(USAGE_CACHE, "utf-8"));
-    if (j && j.fiveHour && typeof j.fiveHour.usedPercent === "number") pct = j.fiveHour.usedPercent;
+    const tmp = USAGE_FILE + ".tmp";
+    writeFileSync(tmp, JSON.stringify(out));
+    renameSync(tmp, USAGE_FILE);
   } catch {}
-  if (Date.now() - mtime > USAGE_TTL_MS) {
-    try {
-      const dir = join(os.homedir(), ".cache");
-      spawn("sh", ["-c",
-        `mkdir -p '${dir}' && curl -fsS --max-time 5 '${USAGE_URL}' -o '${USAGE_CACHE}.tmp' && mv '${USAGE_CACHE}.tmp' '${USAGE_CACHE}'`],
-        { detached: true, stdio: "ignore" }).unref();
-    } catch {}
+}
+
+// Pull the 5-hour used percent out of a usage report (shape: {fiveHour:{usedPercent}}).
+function readUsagePct(file) {
+  try {
+    const j = JSON.parse(readFileSync(file, "utf-8"));
+    if (j && j.fiveHour && typeof j.fiveHour.usedPercent === "number") return j.fiveHour.usedPercent;
+  } catch {}
+  return null;
+}
+
+// --- right: usage % (optional). Two sources, mutually exclusive:
+//   STATUSLINE_USAGE_FILE → read a local JSON file directly (no network).
+//   STATUSLINE_USAGE_URL  → curl in the background, cached locally.
+// Either way rendering never blocks on the network. ---
+function usageSegment() {
+  let pct = null;
+  if (USAGE_FILE) {
+    pct = readUsagePct(USAGE_FILE);
+  } else if (USAGE_URL) {
+    pct = readUsagePct(USAGE_CACHE);
+    let mtime = 0;
+    try { mtime = statSync(USAGE_CACHE).mtimeMs; } catch {}
+    if (Date.now() - mtime > USAGE_TTL_MS) {
+      try {
+        const dir = join(os.homedir(), ".cache");
+        spawn("sh", ["-c",
+          `mkdir -p '${dir}' && curl -fsS --max-time 5 '${USAGE_URL}' -o '${USAGE_CACHE}.tmp' && mv '${USAGE_CACHE}.tmp' '${USAGE_CACHE}'`],
+          { detached: true, stdio: "ignore" }).unref();
+      } catch {}
+    }
+  } else {
+    return "";
   }
   if (pct === null) return "";
   let c = ""; // < warn → normal color
   if (pct >= USAGE_CRIT) c = RED; else if (pct >= USAGE_WARN) c = YELLOW;
-  return c ? c + pct + "%" + R : pct + "%";
+  const n = Math.round(pct * 10) / 10; // round to 0.1, drop float noise (28.999… → 29)
+  return c ? c + n + "%" + R : n + "%";
 }
 
 // --- right: model · effort ---
@@ -143,6 +191,8 @@ function modelSegment() {
 
 // Visible length: strip ANSI; count 📋 as 2 cells.
 const visLen = (s) => s.replace(/\x1b\[[0-9;]*m/g, "").replace(/📋/g, "xx").length;
+
+captureUsage(); // refresh ~/.claude/usage.json from stdin's rate_limits (if file source on)
 
 const left = [tasksSegment(), branchSegment()].filter(Boolean).join("  ");
 const cluster = " " + DIM + "│" + R + " ";
