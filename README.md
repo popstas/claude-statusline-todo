@@ -3,12 +3,12 @@
 A tiny, zero-dependency [Claude Code](https://docs.claude.com/en/docs/claude-code) status line.
 
 - **Left** — checkbox progress from your project's `docs/TODO.md` (`done/total` + percent), plus the current **git branch** when it isn't `main`/`master`.
-- **Right** — the current **model · effort**, color-coded, pinned to the right edge.
-- **Optional** — a **usage %** indicator (e.g. the 5-hour rate-limit window) from a JSON URL you provide.
+- **Right** — a **context-window gauge** (`▓░░░░ 8%`), the current **model · effort**, color-coded, pinned to the right edge.
+- **Optional** — **session cost** (`$0.01`) and a **usage %** indicator (e.g. the 5-hour rate-limit window) from a JSON URL you provide.
 
 ```
-📋 4/31 │ 13%    ⎇ feature-x                        17% │ Opus 4.8 · high
-└── docs/TODO.md    └ branch                LLM usage ┘    └─ model     └─ effort
+📋 4/31 │ 13%    ⎇ feature-x              ▓░░░░ 8% │ $0.01 │ 17% │ Opus 4.8 · high
+└── docs/TODO.md    └ branch              context ┘   cost ┘ usage ┘  model ┘  effort ┘
 ```
 
 Colors are quiet by default and only shout on anomalies: the usual `Opus · high` is uncolored, while a different model or a heavier/lighter effort lights up so you catch it with peripheral vision.
@@ -52,12 +52,24 @@ All optional, via environment variables (set them in the `env` block of the same
 | `STATUSLINE_USAGE_WARN` | `70` | Usage % at which the number turns yellow. |
 | `STATUSLINE_USAGE_CRIT` | `90` | Usage % at which it turns red. |
 | `STATUSLINE_USAGE_TTL` | `90` | Seconds before the cached usage value is refreshed (in the background). |
+| `STATUSLINE_CONTEXT` | `1` (on) | Context-window gauge (`▓░░░░ NN%`) from `context_window.used_percentage` on stdin. Set `0`/`off`/`false` to hide it. |
+| `STATUSLINE_CONTEXT_WARN` | `70` | Context % at which the gauge turns yellow. |
+| `STATUSLINE_CONTEXT_CRIT` | `90` | Context % at which it turns red. |
+| `STATUSLINE_COST` | _(unset → off)_ | Session cost (`$N.NN`) from `cost.total_cost_usd`. Set `1`/`true`/`on` to show it. |
 | `STATUSLINE_RESERVE` | `3` | Columns kept free at the right edge (Claude Code trims slightly early). |
 | `STATUSLINE_BRANCH` | `1` (on) | Set `0`/`off`/`false` to hide the git branch segment. When on, the branch shows for every branch except `main`/`master`. |
 
 ### Git branch
 
 Shown on the left, after the TODO counter, as `⎇ <branch>` — but only when the branch is **not** `main` or `master` (so the common case stays clean and a feature branch stands out). The branch is read straight from `.git/HEAD` (walking up from the project dir, and following `.git` worktree pointers); it never shells out, so rendering stays instant. A detached HEAD shows the short commit SHA.
+
+### Context window
+
+Shown on the right as a 5-cell gauge plus percent (`▓░░░░ 8%`), one cell per 20%. It reads `context_window.used_percentage` — the value Claude Code pre-computes and passes on stdin — so there's no transcript parsing and no network. It stays quiet (dim) until `STATUSLINE_CONTEXT_WARN` (yellow) and `STATUSLINE_CONTEXT_CRIT` (red), so a filling context catches your eye. Hidden early in a session and right after `/compact` (until the next API call repopulates the value). On by default; set `STATUSLINE_CONTEXT=0` to hide it.
+
+### Session cost
+
+Opt-in (`STATUSLINE_COST=1`). Shown on the right as `$N.NN` from `cost.total_cost_usd` — Claude Code's client-side estimate of the current session's API cost.
 
 ### Usage indicator
 

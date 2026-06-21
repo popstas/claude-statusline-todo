@@ -30,6 +30,12 @@ const USAGE_CRIT = Number(process.env.STATUSLINE_USAGE_CRIT || 90);
 const USAGE_TTL_MS = Number(process.env.STATUSLINE_USAGE_TTL || 90) * 1000;
 const RESERVE = Number(process.env.STATUSLINE_RESERVE || 3);
 const USAGE_CACHE = join(os.homedir(), ".cache", "claude-statusline-usage.json");
+// Context-window segment: on by default; STATUSLINE_CONTEXT=0/off/false disables.
+const CONTEXT_ON = !/^(0|off|false)$/i.test(process.env.STATUSLINE_CONTEXT || "");
+const CONTEXT_WARN = Number(process.env.STATUSLINE_CONTEXT_WARN || 70);
+const CONTEXT_CRIT = Number(process.env.STATUSLINE_CONTEXT_CRIT || 90);
+// Session-cost segment: opt-in; STATUSLINE_COST=1/true/on enables.
+const COST_ON = /^(1|true|on)$/i.test(process.env.STATUSLINE_COST || "");
 // Branch segment: on by default; set STATUSLINE_BRANCH=0/off/false to disable.
 const BRANCH_ON = !/^(0|off|false)$/i.test(process.env.STATUSLINE_BRANCH || "");
 const BRANCH_HIDE = new Set(["main", "master"]); // never shown for these
@@ -156,6 +162,30 @@ function usageSegment() {
   return c ? c + n + "%" + R : n + "%";
 }
 
+// --- right: context-window usage (5-cell gauge + percent). Reads the pre-computed
+//     context_window.used_percentage from stdin — no transcript parsing, no network.
+//     Quiet below CONTEXT_WARN; yellow/red past warn/crit. ---
+function contextSegment() {
+  if (!CONTEXT_ON) return "";
+  const cw = input.context_window;
+  if (!cw || typeof cw.used_percentage !== "number") return ""; // null early / after /compact
+  const pct = Math.max(0, Math.min(100, cw.used_percentage));
+  const filled = Math.min(5, Math.floor(pct / 20)); // 5 cells, one per 20%
+  const bar = "▓".repeat(filled) + "░".repeat(5 - filled);
+  const n = Math.round(pct);
+  if (pct >= CONTEXT_CRIT) return RED + bar + " " + n + "%" + R;
+  if (pct >= CONTEXT_WARN) return YELLOW + bar + " " + n + "%" + R;
+  return DIM + bar + R + " " + n + "%";
+}
+
+// --- right: session cost in USD (opt-in). Straight from cost.total_cost_usd. ---
+function costSegment() {
+  if (!COST_ON) return "";
+  const c = input.cost && input.cost.total_cost_usd;
+  if (typeof c !== "number") return "";
+  return "$" + c.toFixed(2);
+}
+
 // --- right: model · effort ---
 function modelSegment() {
   if (!input.model) return "";
@@ -196,7 +226,7 @@ captureUsage(); // refresh ~/.claude/usage.json from stdin's rate_limits (if fil
 
 const left = [tasksSegment(), branchSegment()].filter(Boolean).join("  ");
 const cluster = " " + DIM + "│" + R + " ";
-const right = [usageSegment(), modelSegment()].filter(Boolean).join(cluster);
+const right = [contextSegment(), costSegment(), usageSegment(), modelSegment()].filter(Boolean).join(cluster);
 
 if (!right) {
   process.stdout.write(left);

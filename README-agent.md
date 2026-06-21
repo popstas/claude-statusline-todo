@@ -44,6 +44,8 @@ A status line that shows, on the **left**, `docs/TODO.md` checkbox progress and 
 
    **Git branch** is shown automatically (no config) on the left as `⎇ <branch>`, except on `main`/`master`. Set env `STATUSLINE_BRANCH=0` to disable it. It reads `.git/HEAD` directly and never shells out.
 
+   **Context window** is shown automatically on the right as a gauge (`▓░░░░ 8%`) from `context_window.used_percentage` on stdin — no setup. Set `STATUSLINE_CONTEXT=0` to hide it. **Session cost** (`$N.NN` from `cost.total_cost_usd`) is opt-in: set `STATUSLINE_COST=1`.
+
 6. **Verify** without restarting Claude Code — pipe a sample status JSON:
    ```bash
    echo '{"model":{"id":"claude-opus-4-8","display_name":"Opus 4.8"},"effort":{"level":"high"},"workspace":{"current_dir":"'"$PWD"'"}}' \
@@ -66,6 +68,10 @@ A status line that shows, on the **left**, `docs/TODO.md` checkbox progress and 
 | `STATUSLINE_USAGE_WARN` | `70` | Yellow threshold (%). |
 | `STATUSLINE_USAGE_CRIT` | `90` | Red threshold (%). |
 | `STATUSLINE_USAGE_TTL` | `90` | Background refresh interval (s). |
+| `STATUSLINE_CONTEXT` | `1` (on) | Context-window gauge (`▓░░░░ NN%`) from `context_window.used_percentage` on stdin. `0`/`off`/`false` hides it. |
+| `STATUSLINE_CONTEXT_WARN` | `70` | Context % yellow threshold. |
+| `STATUSLINE_CONTEXT_CRIT` | `90` | Context % red threshold. |
+| `STATUSLINE_COST` | _(unset → off)_ | Session cost (`$N.NN`) from `cost.total_cost_usd`. `1`/`true`/`on` shows it. |
 | `STATUSLINE_RESERVE` | `3` | Columns kept free at the right edge. |
 | `STATUSLINE_BRANCH` | `1` (on) | `0`/`off`/`false` hides the git branch segment; otherwise shows the branch unless it's `main`/`master`. |
 
