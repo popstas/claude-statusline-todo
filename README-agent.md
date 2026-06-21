@@ -69,7 +69,7 @@ A status line that shows, on the **left**, `docs/TODO.md` checkbox progress and 
 | `STATUSLINE_USAGE_CRIT` | `90` | Red threshold (%). |
 | `STATUSLINE_USAGE_TTL` | `90` | Background refresh interval (s). |
 | `STATUSLINE_CONTEXT` | `1` (on) | Context-window gauge (`▓░░░░ NN%`) from `context_window.used_percentage` on stdin. `0`/`off`/`false` hides it. |
-| `STATUSLINE_CONTEXT_WARN` | `70` | Context % yellow threshold. |
+| `STATUSLINE_CONTEXT_WARN` | `50` | Context % yellow threshold. |
 | `STATUSLINE_CONTEXT_CRIT` | `90` | Context % red threshold. |
 | `STATUSLINE_COST` | _(unset → off)_ | Session cost (`$N.NN`) from `cost.total_cost_usd`. `1`/`true`/`on` shows it. |
 | `STATUSLINE_RESERVE` | `3` | Columns kept free at the right edge. |

@@ -53,7 +53,7 @@ All optional, via environment variables (set them in the `env` block of the same
 | `STATUSLINE_USAGE_CRIT` | `90` | Usage % at which it turns red. |
 | `STATUSLINE_USAGE_TTL` | `90` | Seconds before the cached usage value is refreshed (in the background). |
 | `STATUSLINE_CONTEXT` | `1` (on) | Context-window gauge (`▓░░░░ NN%`) from `context_window.used_percentage` on stdin. Set `0`/`off`/`false` to hide it. |
-| `STATUSLINE_CONTEXT_WARN` | `70` | Context % at which the gauge turns yellow. |
+| `STATUSLINE_CONTEXT_WARN` | `50` | Context % at which the gauge turns yellow. |
 | `STATUSLINE_CONTEXT_CRIT` | `90` | Context % at which it turns red. |
 | `STATUSLINE_COST` | _(unset → off)_ | Session cost (`$N.NN`) from `cost.total_cost_usd`. Set `1`/`true`/`on` to show it. |
 | `STATUSLINE_RESERVE` | `3` | Columns kept free at the right edge (Claude Code trims slightly early). |
