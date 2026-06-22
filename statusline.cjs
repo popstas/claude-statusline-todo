@@ -7,7 +7,7 @@
 const { readFileSync, writeFileSync, renameSync, statSync } = require("fs");
 const { join, isAbsolute } = require("path");
 const os = require("os");
-const { spawn } = require("child_process");
+const { spawn, spawnSync } = require("child_process");
 
 // --- ANSI ---
 const R = "\x1b[0m", DIM = "\x1b[2m";
@@ -39,6 +39,8 @@ const COST_ON = /^(1|true|on)$/i.test(process.env.STATUSLINE_COST || "");
 // Branch segment: on by default; set STATUSLINE_BRANCH=0/off/false to disable.
 const BRANCH_ON = !/^(0|off|false)$/i.test(process.env.STATUSLINE_BRANCH || "");
 const BRANCH_HIDE = new Set(["main", "master"]); // never shown for these
+// Git diff-stats segment (+added -removed vs HEAD): opt-in; STATUSLINE_DIFF=1/true/on enables.
+const DIFF_ON = /^(1|true|on)$/i.test(process.env.STATUSLINE_DIFF || "");
 
 // --- stdin: Claude Code status JSON ---
 let input;
@@ -95,6 +97,26 @@ function branchSegment() {
     else if (/^[0-9a-f]{7,40}$/i.test(head)) name = head.slice(0, 7); // detached HEAD
     if (!name || BRANCH_HIDE.has(name)) return "";
     return DIM + "⎇" + R + " " + name;
+  } catch { return ""; }
+}
+
+// --- left: git diff stats (+added -removed vs HEAD). Opt-in. Spawns `git` synchronously
+//     with a short timeout — local only, never the network. No colors. Fail-soft to "".
+//     Counts staged + unstaged changes to tracked files; untracked files are not counted. ---
+function diffSegment() {
+  if (!DIFF_ON) return "";
+  try {
+    if (!gitDir(cwd)) return "";
+    const res = spawnSync("git", ["diff", "--numstat", "HEAD"],
+      { cwd, encoding: "utf-8", timeout: 1000 });
+    if (!res || res.status !== 0 || !res.stdout) return "";
+    let add = 0, del = 0;
+    for (const line of res.stdout.split("\n")) {
+      const m = line.match(/^(\d+)\t(\d+)\t/); // skip "-\t-\t" binary rows
+      if (m) { add += +m[1]; del += +m[2]; }
+    }
+    if (add === 0 && del === 0) return "";
+    return "+" + add + " -" + del;
   } catch { return ""; }
 }
 
@@ -224,7 +246,7 @@ const visLen = (s) => s.replace(/\x1b\[[0-9;]*m/g, "").replace(/📋/g, "xx").le
 
 captureUsage(); // refresh ~/.claude/usage.json from stdin's rate_limits (if file source on)
 
-const left = [tasksSegment(), branchSegment()].filter(Boolean).join("  ");
+const left = [tasksSegment(), branchSegment(), diffSegment()].filter(Boolean).join("  ");
 const cluster = " " + DIM + "│" + R + " ";
 const right = [contextSegment(), costSegment(), usageSegment(), modelSegment()].filter(Boolean).join(cluster);
 

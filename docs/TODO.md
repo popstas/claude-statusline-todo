@@ -8,3 +8,4 @@
 - [x] Show git branch in status line only when not on main/master
 - [x] Alternative usage source: read local ~/.claude/usage.json (STATUSLINE_USAGE_FILE)
 - [x] Add session cost and context usage as in starship (https://starship.rs/advanced-config/#statusline-for-claude-code)
+- [x] Optional git diff-stats segment (+N -N vs HEAD, STATUSLINE_DIFF)

@@ -44,6 +44,8 @@ A status line that shows, on the **left**, `docs/TODO.md` checkbox progress and 
 
    **Git branch** is shown automatically (no config) on the left as `⎇ <branch>`, except on `main`/`master`. Set env `STATUSLINE_BRANCH=0` to disable it. It reads `.git/HEAD` directly and never shells out.
 
+   **Git diff stats** (`+N -N` vs `HEAD`, no colors) are opt-in: set `STATUSLINE_DIFF=1`. Shown on the left after the branch; counts staged + unstaged changes to tracked files. Unlike the branch segment, this shells out (`git diff --numstat HEAD`, synchronous, 1s timeout, local only), hence off by default.
+
    **Context window** is shown automatically on the right as a gauge (`▓░░░░ 8%`) from `context_window.used_percentage` on stdin — no setup. Set `STATUSLINE_CONTEXT=0` to hide it. **Session cost** (`$N.NN` from `cost.total_cost_usd`) is opt-in: set `STATUSLINE_COST=1`.
 
 6. **Verify** without restarting Claude Code — pipe a sample status JSON:
@@ -74,6 +76,7 @@ A status line that shows, on the **left**, `docs/TODO.md` checkbox progress and 
 | `STATUSLINE_COST` | _(unset → off)_ | Session cost (`$N.NN`) from `cost.total_cost_usd`. `1`/`true`/`on` shows it. |
 | `STATUSLINE_RESERVE` | `3` | Columns kept free at the right edge. |
 | `STATUSLINE_BRANCH` | `1` (on) | `0`/`off`/`false` hides the git branch segment; otherwise shows the branch unless it's `main`/`master`. |
+| `STATUSLINE_DIFF` | _(unset → off)_ | Git diff stats (`+N -N` vs `HEAD`, no colors). `1`/`true`/`on` shows it. Shells out to `git diff --numstat HEAD` (sync, 1s timeout, local only). |
 
 ## Constraints
 

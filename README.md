@@ -8,7 +8,7 @@ A tiny, zero-dependency [Claude Code](https://docs.claude.com/en/docs/claude-cod
 
 ```
 📋 4/31 │ 13%    ⎇ feature-x              ▓░░░░ 8% │ $0.01 │ 17% │ Opus 4.8 · high
-└── docs/TODO.md    └ branch              context ┘   cost ┘ usage ┘  model ┘  effort ┘
+└── docs/TODO.md    └ branch          context ┘    cost ┘ usage ┘     └ model    └ effort
 ```
 
 Colors are quiet by default and only shout on anomalies: the usual `Opus · high` is uncolored, while a different model or a heavier/lighter effort lights up so you catch it with peripheral vision.
@@ -19,7 +19,10 @@ Claude Code shows the model and effort only in the startup banner, which scrolls
 
 ## Install
 
-> **Fastest path:** hand [`README-agent.md`](./README-agent.md) to Claude Code and say *"set up this status line"*. It does the steps below for you.
+> **Fastest path:** tell your Claude Code:
+```
+Set up this status line - https://github.com/popstas/claude-statusline-todo, read README-agent.md
+```
 
 Manual:
 
@@ -58,6 +61,11 @@ All optional, via environment variables (set them in the `env` block of the same
 | `STATUSLINE_COST` | _(unset → off)_ | Session cost (`$N.NN`) from `cost.total_cost_usd`. Set `1`/`true`/`on` to show it. |
 | `STATUSLINE_RESERVE` | `3` | Columns kept free at the right edge (Claude Code trims slightly early). |
 | `STATUSLINE_BRANCH` | `1` (on) | Set `0`/`off`/`false` to hide the git branch segment. When on, the branch shows for every branch except `main`/`master`. |
+| `STATUSLINE_DIFF` | _(unset → off)_ | Git diff stats (`+N -N` vs `HEAD`). Set `1`/`true`/`on` to show it. |
+
+### Git diff stats
+
+Opt-in (`STATUSLINE_DIFF=1`). Shown on the left, after the branch, as plain `+N -N` (no colors) — the total added and removed lines in tracked files versus `HEAD` (staged + unstaged; untracked files aren't counted). Hidden when there's nothing changed. Unlike the branch segment, this one shells out to `git diff --numstat HEAD` (synchronously, with a 1s timeout, local only — never the network), so it's off by default; enable it per your tolerance for the tiny per-render `git` call.
 
 ### Git branch
 
