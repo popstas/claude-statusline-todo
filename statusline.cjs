@@ -11,11 +11,15 @@ const { spawn, spawnSync } = require("child_process");
 
 // --- ANSI ---
 const R = "\x1b[0m", DIM = "\x1b[2m";
-const GREEN = "\x1b[32m", YELLOW = "\x1b[33m", BLUE = "\x1b[34m", RED = "\x1b[31m";
+const GREEN = "\x1b[32m", YELLOW = "\x1b[33m", BLUE = "\x1b[34m", RED = "\x1b[31m", CYAN = "\x1b[36m";
 const WHITE_ON_RED = "\x1b[1;37;41m";
 
 // --- config (env, all optional) ---
 const TODO_REL = process.env.STATUSLINE_TODO || "docs/TODO.md";
+// Split the TODO file into several lists by top-level (`# `) headers: opt-in.
+// When on and the file has 2+ such sections, the lead section drives done/total + %
+// and each later section contributes its open count (think `7/23 week │ 48 week+`).
+const TODO_SPLIT = /^(1|true|on)$/i.test(process.env.STATUSLINE_TODO_SPLIT || "");
 const USAGE_URL = process.env.STATUSLINE_USAGE_URL || ""; // empty → usage segment off
 // Alternative source: read a local JSON file (no network) instead of curling a URL.
 // `1`/`true`/`on` → default ~/.claude/usage.json; any other value → that path (with ~).
@@ -49,10 +53,51 @@ input = input || {};
 const cwd = (input.workspace && input.workspace.current_dir) || input.cwd || process.cwd();
 
 // --- left: TODO.md checkboxes (grep-like, no parser) ---
+const DONE_RE = /^[ \t]*[-*]\s+\[[xX]\]/;
+const TODO_RE = /^[ \t]*[-*]\s+\[ \]/;
+const H1_RE = /^#\s+(.+?)\s*$/; // top-level header only (a single leading `#`)
+
+// Group checkboxes by the `# ` header above them. A run of checkboxes before the
+// first header forms an unlabeled lead section. Labels are the header text,
+// lowercased with a trailing `:` trimmed (`# Week:` → `week`, `# Week+` → `week+`).
+function splitSections(text) {
+  const sections = [];
+  let cur = null;
+  const open = (label) => { cur = { label, done: 0, todo: 0 }; sections.push(cur); };
+  for (const line of text.split("\n")) {
+    const h = H1_RE.exec(line);
+    if (h) { open(h[1].trim().replace(/:$/, "").toLowerCase()); continue; }
+    const isDone = DONE_RE.test(line), isTodo = !isDone && TODO_RE.test(line);
+    if (!isDone && !isTodo) continue;
+    if (!cur) open(""); // checkboxes before any header
+    if (isDone) cur.done++; else cur.todo++;
+  }
+  return sections.filter((s) => s.done + s.todo > 0);
+}
+
+// Render split sections: lead `done/total label` drives the %, each later section
+// adds its open count (cyan). e.g. `📋 7/23 week │ 48 week+ │ 30%`.
+function splitRender(secs) {
+  const sep = " " + DIM + "│" + R + " ";
+  const lead = secs[0];
+  const total = lead.done + lead.todo;
+  const pct = total > 0 ? Math.round((lead.done / total) * 100) : 0;
+  let out = "📋 " + GREEN + lead.done + "/" + total + R +
+    (lead.label ? " " + DIM + lead.label + R : "");
+  for (const s of secs.slice(1)) {
+    out += sep + CYAN + s.todo + (s.label ? " " + s.label : "") + R;
+  }
+  return out + sep + DIM + pct + "%" + R;
+}
+
 function tasksSegment() {
   const p = isAbsolute(TODO_REL) ? TODO_REL : join(cwd, TODO_REL);
   let text;
   try { text = readFileSync(p, "utf-8"); } catch { return ""; }
+  if (TODO_SPLIT) {
+    const secs = splitSections(text);
+    if (secs.length >= 2) return splitRender(secs); // else fall through to plain render
+  }
   const done = (text.match(/^[ \t]*[-*]\s+\[[xX]\]/gm) || []).length;
   const todo = (text.match(/^[ \t]*[-*]\s+\[ \]/gm) || []).length;
   const total = done + todo;

@@ -50,6 +50,7 @@ All optional, via environment variables (set them in the `env` block of the same
 | Variable | Default | Meaning |
 |---|---|---|
 | `STATUSLINE_TODO` | `docs/TODO.md` | TODO file path (relative to the project, or absolute). |
+| `STATUSLINE_TODO_SPLIT` | _(unset → off)_ | Split the TODO file into several lists by top-level (`# `) headers. Set `1`/`true`/`on` to enable. |
 | `STATUSLINE_USAGE_URL` | _(unset → off)_ | URL of a JSON usage report. When unset (and no file source), the usage segment is hidden. |
 | `STATUSLINE_USAGE_FILE` | _(unset → off)_ | Read usage from a **local JSON file** instead of a URL (no network). `1`/`true`/`on` → `~/.claude/usage.json`; any other value → that path (`~` is expanded). Takes priority over `STATUSLINE_USAGE_URL`. |
 | `STATUSLINE_USAGE_WARN` | `70` | Usage % at which the number turns yellow. |
@@ -62,6 +63,22 @@ All optional, via environment variables (set them in the `env` block of the same
 | `STATUSLINE_RESERVE` | `3` | Columns kept free at the right edge (Claude Code trims slightly early). |
 | `STATUSLINE_BRANCH` | `1` (on) | Set `0`/`off`/`false` to hide the git branch segment. When on, the branch shows for every branch except `main`/`master`. |
 | `STATUSLINE_DIFF` | _(unset → off)_ | Git diff stats (`+N -N` vs `HEAD`). Set `1`/`true`/`on` to show it. |
+
+### Split task lists
+
+Opt-in (`STATUSLINE_TODO_SPLIT=1`). Splits a single TODO file into separate lists by its top-level (`# `) headers. The first section with tasks is the **lead** — it drives the `done/total` counter and the percentage — and each later section contributes just its **open** count (cyan). A file like:
+
+```markdown
+# Week:
+- [x] shipped
+- [ ] in progress
+
+# Week+
+- [ ] later
+- [ ] someday
+```
+
+renders as `📋 1/2 week │ 2 week+ │ 50%`. Section labels come from the header text, lowercased with a trailing `:` trimmed (`# Week:` → `week`, `# Week+` → `week+`). Checkboxes before the first header form an unlabeled lead section. If the file has fewer than two header sections, it falls back to the plain overall counter.
 
 ### Git diff stats
 

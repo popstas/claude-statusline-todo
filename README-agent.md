@@ -65,6 +65,7 @@ A status line that shows, on the **left**, `docs/TODO.md` checkbox progress and 
 | Variable | Default | Meaning |
 |---|---|---|
 | `STATUSLINE_TODO` | `docs/TODO.md` | TODO file path (relative or absolute). |
+| `STATUSLINE_TODO_SPLIT` | _(unset → off)_ | Split the TODO file into lists by top-level (`# `) headers. `1`/`true`/`on` enables. Lead section drives `done/total` + %; later sections show their open count (e.g. `📋 1/2 week │ 2 week+ │ 50%`). <2 sections → plain counter. |
 | `STATUSLINE_USAGE_URL` | _(unset → off)_ | JSON usage endpoint. |
 | `STATUSLINE_USAGE_FILE` | _(unset → off)_ | Local JSON usage file (no network). `1`/`true`/`on` → `~/.claude/usage.json`; else a path (`~` expanded). Wins over `STATUSLINE_USAGE_URL`. |
 | `STATUSLINE_USAGE_WARN` | `70` | Yellow threshold (%). |
