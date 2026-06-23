@@ -20,6 +20,9 @@ const TODO_REL = process.env.STATUSLINE_TODO || "docs/TODO.md";
 // When on and the file has 2+ such sections, the lead section drives done/total + %
 // and each later section contributes its open count (think `7/23 week │ 48 week+`).
 const TODO_SPLIT = /^(1|true|on)$/i.test(process.env.STATUSLINE_TODO_SPLIT || "");
+// Count only col-0 checkboxes (ignore indented sub-tasks): opt-in. Useful when a
+// file nests detail under each task and only the top-level items should be tallied.
+const TODO_TOPLEVEL = /^(1|true|on)$/i.test(process.env.STATUSLINE_TODO_TOPLEVEL || "");
 const USAGE_URL = process.env.STATUSLINE_USAGE_URL || ""; // empty → usage segment off
 // Alternative source: read a local JSON file (no network) instead of curling a URL.
 // `1`/`true`/`on` → default ~/.claude/usage.json; any other value → that path (with ~).
@@ -53,8 +56,9 @@ input = input || {};
 const cwd = (input.workspace && input.workspace.current_dir) || input.cwd || process.cwd();
 
 // --- left: TODO.md checkboxes (grep-like, no parser) ---
-const DONE_RE = /^[ \t]*[-*]\s+\[[xX]\]/;
-const TODO_RE = /^[ \t]*[-*]\s+\[ \]/;
+const INDENT = TODO_TOPLEVEL ? "" : "[ \\t]*"; // STATUSLINE_TODO_TOPLEVEL → col-0 only
+const DONE_RE = new RegExp("^" + INDENT + "[-*]\\s+\\[[xX]\\]");
+const TODO_RE = new RegExp("^" + INDENT + "[-*]\\s+\\[ \\]");
 const H1_RE = /^#\s+(.+?)\s*$/; // top-level header only (a single leading `#`)
 
 // Group checkboxes by the `# ` header above them. A run of checkboxes before the
@@ -98,8 +102,8 @@ function tasksSegment() {
     const secs = splitSections(text);
     if (secs.length >= 2) return splitRender(secs); // else fall through to plain render
   }
-  const done = (text.match(/^[ \t]*[-*]\s+\[[xX]\]/gm) || []).length;
-  const todo = (text.match(/^[ \t]*[-*]\s+\[ \]/gm) || []).length;
+  const done = (text.match(new RegExp(DONE_RE.source, "gm")) || []).length;
+  const todo = (text.match(new RegExp(TODO_RE.source, "gm")) || []).length;
   const total = done + todo;
   if (total === 0) return "";
   const pct = Math.round((done / total) * 100);
